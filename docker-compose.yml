@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+  api:
+    build: .  
+    container_name: crm_api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - .:/app
+      - /app/node_modules   # 👈 🔥 CRITICAL FIX
+    command: sh -c "npx prisma generate && npm run start:dev"
+    environment:
+    - CHOKIDAR_USEPOLLING=true  # 👈 for reliable watch inside docker
+
+  postgres:
+    image: postgres:15
+    container_name: crm_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: crm_redis
+    ports:
+      - "6379:6379"
+
+  # 🐘 PostgreSQL GUI
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: crm_pgadmin
+    restart: always
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
+
+  # 🟥 Redis GUI
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: crm_redis_ui
+    ports:
+      - "5540:5540"
+    depends_on:
+      - redis
+
+volumes:
+  postgres_data:
